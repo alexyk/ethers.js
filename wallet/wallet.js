@@ -371,6 +371,36 @@ utils.defineProperty(Wallet.prototype, 'encrypt', function(password, options, pr
     return secretStorage.encrypt(this.privateKey, password, options, progressCallback);
 });
 
+utils.defineProperty(Wallet.prototype, 'encryptDef', function(password, options, callback) {
+    if (typeof(options) === 'function' && !callback) {
+        callback = options;
+        options = {};
+    }
+
+    if (callback && typeof(callback) !== 'function') {
+        throw new Error('invalid callback');
+    }
+
+    if (!options) { options = {}; }
+
+    if (this.mnemonic) {
+        // Make sure we don't accidentally bubble the mnemonic up the call-stack
+        var safeOptions = {};
+        for (var key in options) { safeOptions[key] = options[key]; }
+        options = safeOptions;
+
+        // Set the mnemonic and path
+        options.mnemonic = this.mnemonic;
+        options.path = this.path
+    }
+    return secretStorage.encryptDef(this.privateKey, password, options, callback);
+});
+
+
+utils.defineProperty(Wallet.prototype, 'encryptContinue', function(salt, N, r, p, client, entropy, key, privateKey, iv, uuidRandom) {
+    return secretStorage.encryptContinue(salt, N, r, p, client, entropy, privateKey, key, iv, uuidRandom);
+});
+
 
 utils.defineProperty(Wallet, 'isEncryptedWallet', function(json) {
     return (secretStorage.isValidWallet(json) || secretStorage.isCrowdsaleWallet(json));
