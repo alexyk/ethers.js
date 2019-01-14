@@ -233,7 +233,6 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
                         reject(error);
 
                     } else if (key) {
-                        console.log("utils.defineProperty decrypt 5 - 5", key);
                         key = arrayify(key);
 
                         var signingKey = getSigningKey(key, reject);
@@ -287,12 +286,9 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
 });
 
 utils.defineProperty(secretStorage, 'decryptDef', function(json, password, callback) {
-    console.log("utils.defineProperty decrypt 0");
     var data = JSON.parse(json);
 
     password = getPassword(password);
-
-    console.log("utils.defineProperty decrypt 1", password);
 
     var kdf = searchPath(data, 'crypto/kdf');
     if (kdf && typeof(kdf) === 'string') {
@@ -406,21 +402,17 @@ utils.defineProperty(secretStorage, 'getSignKeyForDecryptDef', function(json, ke
     }
 
     var getSigningKey = function(key, reject) {
-        console.log("utils.defineProperty decrypt 3-1");
         var ciphertext = arrayify(searchPath(data, 'crypto/ciphertext'));
 
-        console.log("utils.defineProperty decrypt 3-2", ciphertext);
         var computedMAC = utils.hexlify(computeMAC(key.slice(16, 32), ciphertext)).substring(2);
         if (computedMAC !== searchPath(data, 'crypto/mac').toLowerCase()) {
             reject(new Error('invalid password'));
             return null;
         }
 
-        console.log("utils.defineProperty decrypt 3-3", computedMAC);
         var privateKey = decrypt(key.slice(0, 16), ciphertext);
         var mnemonicKey = key.slice(32, 64);
 
-        console.log("utils.defineProperty decrypt 3-4", privateKey, mnemonicKey);
         if (!privateKey) {
             reject(new Error('unsupported cipher'));
             return null;
@@ -432,7 +424,6 @@ utils.defineProperty(secretStorage, 'getSignKeyForDecryptDef', function(json, ke
             return null;
         }
 
-        console.log("utils.defineProperty decrypt 3-5", signingKey);
         // Version 0.1 x-ethers metadata must contain an encrypted mnemonic phrase
         if (searchPath(data, 'x-ethers/version') === '0.1') {
             var mnemonicCiphertext = arrayify(searchPath(data, 'x-ethers/mnemonicCiphertext'), 'x-ethers/mnemonicCiphertext');
@@ -460,11 +451,9 @@ utils.defineProperty(secretStorage, 'getSignKeyForDecryptDef', function(json, ke
     key = arrayify(key);
     let error = null;
 
-    console.log("getSignKeyForDecryptDef start");
     var signingKey = getSigningKey(key, (err) => {
         error = err;
     });
-    console.log("getSignKeyForDecryptDef error", error);
     if (error != null) {
         return callback(error);
     }
@@ -472,7 +461,6 @@ utils.defineProperty(secretStorage, 'getSignKeyForDecryptDef', function(json, ke
         return new Error("unknown error, cannot get signing key.");
     }
 
-    console.log("getSignKeyForDecryptDef", signingKey);
     new callback(null, signingKey);
 });
 
@@ -639,7 +627,6 @@ utils.defineProperty(secretStorage, 'encrypt', function(privateKey, password, op
 
 utils.defineProperty(secretStorage, 'encryptDef', function(privateKey, password, options, callback) {
 
-    console.log("secretStorage - start");
     // the options are optional, so adjust the call as needed
     if (typeof(options) === 'function' && !callback) {
         callback = options;
@@ -712,14 +699,11 @@ utils.defineProperty(secretStorage, 'encryptDef', function(privateKey, password,
         if (options.scrypt.p) { p = options.scrypt.p; }
     }
 
-    console.log("secretStorage - end");
-    console.log(uuidRandom);
     callback(password, salt, N, r, p, 64, client, entropy, privateKey, iv, uuidRandom);
 });
 
 utils.defineProperty(secretStorage, 'encryptContinue', function(salt, N, r, p, client, entropy, privateKey, key, iv, uuidRandom) {
-    console.log("salt");
-    console.log(utils.hexlify(salt).substring(2));
+
     key = arrayify(key);
 
     // This will be used to encrypt the wallet (as per Web3 secret storage)
