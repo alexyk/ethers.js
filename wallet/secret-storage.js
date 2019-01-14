@@ -131,12 +131,10 @@ utils.defineProperty(secretStorage, 'decryptCrowdsale', function(json, password)
 
 
 utils.defineProperty(secretStorage, 'decrypt', function(json, password, progressCallback) {
-    console.log("utils.defineProperty decrypt 0");
     var data = JSON.parse(json);
 
     password = getPassword(password);
 
-    console.log("utils.defineProperty decrypt 1", password);
     var decrypt = function(key, ciphertext) {
         var cipher = searchPath(data, 'crypto/cipher');
         if (cipher === 'aes-128-ctr') {
@@ -151,28 +149,22 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
         return null;
     };
 
-    console.log("utils.defineProperty decrypt 2", decrypt);
     var computeMAC = function(derivedHalf, ciphertext) {
         return utils.keccak256(utils.concat([derivedHalf, ciphertext]));
     }
 
-    console.log("utils.defineProperty decrypt 3", computeMAC);
     var getSigningKey = function(key, reject) {
-        console.log("utils.defineProperty decrypt 3-1");
         var ciphertext = arrayify(searchPath(data, 'crypto/ciphertext'));
 
-        console.log("utils.defineProperty decrypt 3-2", ciphertext);
         var computedMAC = utils.hexlify(computeMAC(key.slice(16, 32), ciphertext)).substring(2);
         if (computedMAC !== searchPath(data, 'crypto/mac').toLowerCase()) {
             reject(new Error('invalid password'));
             return null;
         }
 
-        console.log("utils.defineProperty decrypt 3-3", computedMAC);
         var privateKey = decrypt(key.slice(0, 16), ciphertext);
         var mnemonicKey = key.slice(32, 64);
 
-        console.log("utils.defineProperty decrypt 3-4", privateKey, mnemonicKey);
         if (!privateKey) {
             reject(new Error('unsupported cipher'));
             return null;
@@ -184,7 +176,6 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
             return null;
         }
 
-        console.log("utils.defineProperty decrypt 3-5", signingKey);
         // Version 0.1 x-ethers metadata must contain an encrypted mnemonic phrase
         if (searchPath(data, 'x-ethers/version') === '0.1') {
             var mnemonicCiphertext = arrayify(searchPath(data, 'x-ethers/mnemonicCiphertext'), 'x-ethers/mnemonicCiphertext');
@@ -210,10 +201,8 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
         return signingKey;
     }
 
-    console.log("utils.defineProperty decrypt 4", getSigningKey);
 
     return new Promise(function(resolve, reject) {
-        console.log("utils.defineProperty decrypt 5 - 1");
         var kdf = searchPath(data, 'crypto/kdf');
         if (kdf && typeof(kdf) === 'string') {
             if (kdf.toLowerCase() === 'scrypt') {
@@ -238,11 +227,8 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
                     return;
                 }
 
-                console.log("utils.defineProperty decrypt 5 - 2");
-                console.log("utils.defineProperty decrypt 5 - 2", password, salt, N, r, p, 64);
                 scrypt(password, salt, N, r, p, 64, function(error, progress, key) {
                     if (error) {
-                        console.log("utils.defineProperty decrypt 5 - 4");
                         error.progress = progress;
                         reject(error);
 
@@ -251,7 +237,6 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
                         key = arrayify(key);
 
                         var signingKey = getSigningKey(key, reject);
-                        console.log("utils.defineProperty decrypt 5 - 6");
                         if (!signingKey) { return; }
 
                         if (progressCallback) { progressCallback(1); }

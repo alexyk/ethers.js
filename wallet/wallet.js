@@ -428,7 +428,6 @@ utils.defineProperty(Wallet, 'fromEncryptedWallet', function(json, password, pro
     }
 
     return new Promise(function(resolve, reject) {
-        console.log("wallet fromEncryptedWallet0");
         if (secretStorage.isCrowdsaleWallet(json)) {
             try {
                 console.log("wallet fromEncryptedWallet isCrowdsaleWallet");
@@ -440,10 +439,8 @@ utils.defineProperty(Wallet, 'fromEncryptedWallet', function(json, password, pro
             }
 
         } else if (secretStorage.isValidWallet(json)) {
-            console.log("wallet fromEncryptedWallet isValidWallet");
 
             secretStorage.decrypt(json, password, progressCallback).then(function(signingKey) {
-                console.log("wallet fromEncryptedWallet secretStorage.decrypt");
                 var wallet = new Wallet(signingKey);
                 if (signingKey.mnemonic && signingKey.path) {
                     utils.defineProperty(wallet, 'mnemonic', signingKey.mnemonic);
@@ -467,12 +464,9 @@ utils.defineProperty(Wallet, 'fromEncryptedWalletDef', function(json, password, 
         throw new Error('invalid callback');
     }
 
-    console.log("wallet fromEncryptedWallet0");
     if (secretStorage.isCrowdsaleWallet(json)) {
         try {
-            console.log("wallet fromEncryptedWallet isCrowdsaleWallet");
             var privateKey = secretStorage.decryptCrowdsale(json, password);
-            console.log("wallet fromEncryptedWallet secretStorage.decryptCrowdsale");
             callback(null, privateKey);
             // callback(null, new Wallet(privateKey))
         } catch (error) {
@@ -480,7 +474,6 @@ utils.defineProperty(Wallet, 'fromEncryptedWalletDef', function(json, password, 
         }
 
     } else if (secretStorage.isValidWallet(json)) {
-        console.log("wallet fromEncryptedWallet isValidWallet");
 
         secretStorage.decryptDef(json, password, callback);
         // .then(function(signingKey) {
