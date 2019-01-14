@@ -131,10 +131,12 @@ utils.defineProperty(secretStorage, 'decryptCrowdsale', function(json, password)
 
 
 utils.defineProperty(secretStorage, 'decrypt', function(json, password, progressCallback) {
+    console.log("utils.defineProperty decrypt 0");
     var data = JSON.parse(json);
 
     password = getPassword(password);
 
+    console.log("utils.defineProperty decrypt 1", password);
     var decrypt = function(key, ciphertext) {
         var cipher = searchPath(data, 'crypto/cipher');
         if (cipher === 'aes-128-ctr') {
@@ -149,22 +151,28 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
         return null;
     };
 
+    console.log("utils.defineProperty decrypt 2", decrypt);
     var computeMAC = function(derivedHalf, ciphertext) {
         return utils.keccak256(utils.concat([derivedHalf, ciphertext]));
     }
 
+    console.log("utils.defineProperty decrypt 3", computeMAC);
     var getSigningKey = function(key, reject) {
+        console.log("utils.defineProperty decrypt 3-1");
         var ciphertext = arrayify(searchPath(data, 'crypto/ciphertext'));
 
+        console.log("utils.defineProperty decrypt 3-2", ciphertext);
         var computedMAC = utils.hexlify(computeMAC(key.slice(16, 32), ciphertext)).substring(2);
         if (computedMAC !== searchPath(data, 'crypto/mac').toLowerCase()) {
             reject(new Error('invalid password'));
             return null;
         }
 
+        console.log("utils.defineProperty decrypt 3-3", computedMAC);
         var privateKey = decrypt(key.slice(0, 16), ciphertext);
         var mnemonicKey = key.slice(32, 64);
 
+        console.log("utils.defineProperty decrypt 3-4", privateKey, mnemonicKey);
         if (!privateKey) {
             reject(new Error('unsupported cipher'));
             return null;
@@ -176,6 +184,7 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
             return null;
         }
 
+        console.log("utils.defineProperty decrypt 3-5", signingKey);
         // Version 0.1 x-ethers metadata must contain an encrypted mnemonic phrase
         if (searchPath(data, 'x-ethers/version') === '0.1') {
             var mnemonicCiphertext = arrayify(searchPath(data, 'x-ethers/mnemonicCiphertext'), 'x-ethers/mnemonicCiphertext');
@@ -201,8 +210,10 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
         return signingKey;
     }
 
+    console.log("utils.defineProperty decrypt 4", getSigningKey);
 
     return new Promise(function(resolve, reject) {
+        console.log("utils.defineProperty decrypt 5 - 1");
         var kdf = searchPath(data, 'crypto/kdf');
         if (kdf && typeof(kdf) === 'string') {
             if (kdf.toLowerCase() === 'scrypt') {
@@ -227,15 +238,20 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
                     return;
                 }
 
+                console.log("utils.defineProperty decrypt 5 - 2");
+                console.log("utils.defineProperty decrypt 5 - 2", password, salt, N, r, p, 64);
                 scrypt(password, salt, N, r, p, 64, function(error, progress, key) {
                     if (error) {
+                        console.log("utils.defineProperty decrypt 5 - 4");
                         error.progress = progress;
                         reject(error);
 
                     } else if (key) {
+                        console.log("utils.defineProperty decrypt 5 - 5", key);
                         key = arrayify(key);
 
                         var signingKey = getSigningKey(key, reject);
+                        console.log("utils.defineProperty decrypt 5 - 6");
                         if (!signingKey) { return; }
 
                         if (progressCallback) { progressCallback(1); }
@@ -283,6 +299,196 @@ utils.defineProperty(secretStorage, 'decrypt', function(json, password, progress
             reject(new Error('unsupported key-derivation function'));
         }
     });
+});
+
+utils.defineProperty(secretStorage, 'decryptDef', function(json, password, callback) {
+    console.log("utils.defineProperty decrypt 0");
+    var data = JSON.parse(json);
+
+    password = getPassword(password);
+
+    console.log("utils.defineProperty decrypt 1", password);
+
+    var kdf = searchPath(data, 'crypto/kdf');
+    if (kdf && typeof(kdf) === 'string') {
+        if (kdf.toLowerCase() === 'scrypt') {
+            var salt = arrayify(searchPath(data, 'crypto/kdfparams/salt'), 'crypto/kdfparams/salt');
+            var N = parseInt(searchPath(data, 'crypto/kdfparams/n'));
+            var r = parseInt(searchPath(data, 'crypto/kdfparams/r'));
+            var p = parseInt(searchPath(data, 'crypto/kdfparams/p'));
+            if (!N || !r || !p) {
+                callback(new Error('unsupported key-derivation function parameters'))
+                return;
+            }
+
+            // Make sure N is a power of 2
+            if ((N & (N - 1)) !== 0) {
+                callback(new Error('unsupported key-derivation function parameter value for N'))
+                return;
+            }
+
+            var dkLen = parseInt(searchPath(data, 'crypto/kdfparams/dklen'));
+            if (dkLen !== 32) {
+                callback(new Error('unsupported key-derivation derived-key length'))
+                return;
+            }
+
+            callback(null, null, password, salt, N, r, p, 64); // password: Buffer, salt: Buffer, N: number, r: number, p: number, dklen: number,
+
+            console.log("utils.defineProperty decrypt 5 - 2", password, salt, N, r, p, 64);
+            // scrypt(password, salt, N, r, p, 64, function(error, progress, key) {
+            //     console.log("utils.defineProperty decrypt 5 - 3");
+            //     if (error) {
+            //         console.log("utils.defineProperty decrypt 5 - 4");
+            //         error.progress = progress;
+            //         reject(error);
+
+            //     } else if (key) {
+            //         console.log("utils.defineProperty decrypt 5 - 5");
+            //         key = arrayify(key);
+
+            //         var signingKey = getSigningKey(key, reject);
+            //         console.log("utils.defineProperty decrypt 5 - 6");
+            //         if (!signingKey) { return; }
+
+            //         if (progressCallback) { progressCallback(1); }
+            //         resolve(signingKey);
+
+            //     } else if (progressCallback) {
+            //         return progressCallback(progress);
+            //     }
+            // });
+
+        } else if (kdf.toLowerCase() === 'pbkdf2') {
+            var salt = arrayify(searchPath(data, 'crypto/kdfparams/salt'), 'crypto/kdfparams/salt');
+
+            var prfFunc = null;
+            var prf = searchPath(data, 'crypto/kdfparams/prf');
+            if (prf === 'hmac-sha256') {
+                prfFunc = hmac.createSha256Hmac;
+            } else if (prf === 'hmac-sha512') {
+                prfFunc = hmac.createSha512Hmac;
+            } else {
+                reject(new Error('unsupported prf'));
+                return;
+            }
+
+            var c = parseInt(searchPath(data, 'crypto/kdfparams/c'));
+
+            var dkLen = parseInt(searchPath(data, 'crypto/kdfparams/dklen'));
+            if (dkLen !== 32) {
+                callback(new Error('unsupported key-derivation derived-key length'));
+                return;
+            }
+
+            var key = pbkdf2(password, salt, c, dkLen, prfFunc);
+
+            var signingKey = getSigningKey(key, reject);
+            if (!signingKey) { 
+                new Error('unknown')
+                return; 
+            }
+            callback(null, signingKey);
+
+        } else {
+            callback(new Error('unsupported key-derivation function'));
+        }
+
+    } else {
+        callback(new Error('unsupported key-derivation function'));
+    }
+});
+
+utils.defineProperty(secretStorage, 'getSignKeyForDecryptDef', function(json, key, callback) {
+    var data = JSON.parse(json);
+    
+    var decrypt = function(key, ciphertext) {
+        var cipher = searchPath(data, 'crypto/cipher');
+        if (cipher === 'aes-128-ctr') {
+            var iv = arrayify(searchPath(data, 'crypto/cipherparams/iv'), 'crypto/cipherparams/iv')
+            var counter = new aes.Counter(iv);
+
+            var aesCtr = new aes.ModeOfOperation.ctr(key, counter);
+
+            return arrayify(aesCtr.decrypt(ciphertext));
+        }
+
+        return null;
+    };
+    
+    var computeMAC = function(derivedHalf, ciphertext) {
+        return utils.keccak256(utils.concat([derivedHalf, ciphertext]));
+    }
+
+    var getSigningKey = function(key, reject) {
+        console.log("utils.defineProperty decrypt 3-1");
+        var ciphertext = arrayify(searchPath(data, 'crypto/ciphertext'));
+
+        console.log("utils.defineProperty decrypt 3-2", ciphertext);
+        var computedMAC = utils.hexlify(computeMAC(key.slice(16, 32), ciphertext)).substring(2);
+        if (computedMAC !== searchPath(data, 'crypto/mac').toLowerCase()) {
+            reject(new Error('invalid password'));
+            return null;
+        }
+
+        console.log("utils.defineProperty decrypt 3-3", computedMAC);
+        var privateKey = decrypt(key.slice(0, 16), ciphertext);
+        var mnemonicKey = key.slice(32, 64);
+
+        console.log("utils.defineProperty decrypt 3-4", privateKey, mnemonicKey);
+        if (!privateKey) {
+            reject(new Error('unsupported cipher'));
+            return null;
+        }
+
+        var signingKey = new SigningKey(privateKey);
+        if (signingKey.address !== utils.getAddress(data.address)) {
+            reject(new Error('address mismatch'));
+            return null;
+        }
+
+        console.log("utils.defineProperty decrypt 3-5", signingKey);
+        // Version 0.1 x-ethers metadata must contain an encrypted mnemonic phrase
+        if (searchPath(data, 'x-ethers/version') === '0.1') {
+            var mnemonicCiphertext = arrayify(searchPath(data, 'x-ethers/mnemonicCiphertext'), 'x-ethers/mnemonicCiphertext');
+            var mnemonicIv = arrayify(searchPath(data, 'x-ethers/mnemonicCounter'), 'x-ethers/mnemonicCounter');
+
+            var mnemonicCounter = new aes.Counter(mnemonicIv);
+            var mnemonicAesCtr = new aes.ModeOfOperation.ctr(mnemonicKey, mnemonicCounter);
+
+            var path = searchPath(data, 'x-ethers/path') || defaultPath;
+
+            var entropy = arrayify(mnemonicAesCtr.decrypt(mnemonicCiphertext));
+            var mnemonic = HDNode.entropyToMnemonic(entropy);
+
+            if (HDNode.fromMnemonic(mnemonic).derivePath(path).privateKey != utils.hexlify(privateKey)) {
+                reject(new Error('mnemonic mismatch'));
+                return null;
+            }
+
+            signingKey.mnemonic = mnemonic;
+            signingKey.path = path;
+        }
+
+        return signingKey;
+    }
+    key = arrayify(key);
+    let error = null;
+
+    console.log("getSignKeyForDecryptDef start");
+    var signingKey = getSigningKey(key, (err) => {
+        error = err;
+    });
+    console.log("getSignKeyForDecryptDef error", error);
+    if (error != null) {
+        return callback(error);
+    }
+    if (!signingKey) { 
+        return new Error("unknown error, cannot get signing key.");
+    }
+
+    console.log("getSignKeyForDecryptDef", signingKey);
+    new callback(null, signingKey);
 });
 
 utils.defineProperty(secretStorage, 'encrypt', function(privateKey, password, options, progressCallback) {
