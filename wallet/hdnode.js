@@ -191,6 +191,7 @@ function mnemonicToEntropy(mnemonic) {
 }
 
 function entropyToMnemonic(entropy) {
+    console.log(`[EthersJS] entropyToMnemonic - START`, {entropy})
     entropy = utils.arrayify(entropy);
 
     if ((entropy.length % 4) !== 0 || entropy.length < 16 || entropy.length > 32) {
@@ -199,6 +200,7 @@ function entropyToMnemonic(entropy) {
 
     var words = [0];
 
+    console.log(`[EthersJS] entropyToMnemonic 1 - looping entropy`)
     var remainingBits = 11;
     for (var i = 0; i < entropy.length; i++) {
 
@@ -220,20 +222,26 @@ function entropyToMnemonic(entropy) {
             remainingBits += 3;
         }
     }
+    console.log(`[EthersJS] entropyToMnemonic 2 - looping entropy done`)
 
     // Compute the checksum bits
     var checksum = utils.arrayify(utils.sha256(entropy))[0];
     var checksumBits = entropy.length / 4;
     checksum &= getUpperMask(checksumBits);
+    console.log(`[EthersJS] entropyToMnemonic 3 - checksum done`)
 
     // Shift the checksum into the word indices
     words[words.length - 1] <<= checksumBits;
     words[words.length - 1] |= (checksum >> (8 - checksumBits));
+    console.log(`[EthersJS] entropyToMnemonic 4 - indices`)
 
+    console.log(`[EthersJS] entropyToMnemonic 4 - indices to words - start`)
     // Convert indices into words
     for (var i = 0; i < words.length; i++) {
         words[i] = wordlist[words[i]];
     }
+
+    console.log(`[EthersJS] entropyToMnemonic - END`, {words})
 
     return words.join(' ');
 }

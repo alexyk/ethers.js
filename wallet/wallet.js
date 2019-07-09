@@ -346,6 +346,7 @@ utils.defineProperty(Wallet, 'verifyMessage', function(message, signature) {
 });
 
 utils.defineProperty(Wallet.prototype, 'encrypt', function(password, options, progressCallback) {
+    console.log(`[EthersJS] Wallet::encrypt - START`, {password, options, progressCallback})
     if (typeof(options) === 'function' && !progressCallback) {
         progressCallback = options;
         options = {};
@@ -367,6 +368,8 @@ utils.defineProperty(Wallet.prototype, 'encrypt', function(password, options, pr
         options.mnemonic = this.mnemonic;
         options.path = this.path
     }
+
+    console.log(`[EthersJS] Wallet::encrypt - END`, {privateKey:this.privateKey, password, options, progressCallback});
 
     return secretStorage.encrypt(this.privateKey, password, options, progressCallback);
 });
@@ -511,13 +514,19 @@ utils.defineProperty(Wallet, 'fromEncryptedWalletProcessDef', function(signingKe
 });
 
 utils.defineProperty(Wallet, 'fromMnemonic', function(mnemonic, path) {
+    console.log(`[EthersJS] Wallet::fromMnemonic START`, {mnemonic, path})
     if (!path) { path = defaultPath; }
 
     var hdnode = HDNode.fromMnemonic(mnemonic).derivePath(path);
+    console.log(`[EthersJS] Wallet::fromMnemonic - 1/2`, {hdnode})
 
     var wallet = new Wallet(hdnode.privateKey);
+    console.log(`[EthersJS] Wallet::fromMnemonic - 2/2`, {wallet})
+
     utils.defineProperty(wallet, 'mnemonic', mnemonic);
     utils.defineProperty(wallet, 'path', path);
+
+    console.log(`[EthersJS] Wallet::fromMnemonic - END`, {wallet})
 
     return wallet;
 });
